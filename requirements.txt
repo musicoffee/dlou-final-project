@@ -1,0 +1,2 @@
+# 本项目仅使用 Python 标准库，无需 pip 安装第三方依赖。
+# 桌面客户端需要带 Tkinter 的 Python（推荐 python.org 安装包）。
