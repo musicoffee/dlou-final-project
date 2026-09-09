@@ -1,5 +1,4 @@
 """先运行本文件，再运行 client.py。浏览器根地址用于查看服务状态。"""
-import getpass
 import json
 import os
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -86,25 +85,12 @@ def make_server(service, host='127.0.0.1', port=8765):
 
 def main():
     service = LearningService()
-    if not service.has_admin():
-        print('首次启动，请设置唯一管理员（密码不会显示）。')
-        while True:
-            username = input('管理员用户名：').strip()
-            password = getpass.getpass('管理员密码（至少6位）：')
-            confirm = getpass.getpass('确认密码：')
-            if password != confirm:
-                print('两次密码不一致，请重新输入。')
-                continue
-            try:
-                service.create_admin(username, password)
-                break
-            except ValueError as error:
-                print(error)
     # 联网 C/S 版本默认监听所有网卡，同机仍使用 127.0.0.1 访问。
     host = os.environ.get('LEARNING_HOST', '0.0.0.0')
     port = int(os.environ.get('LEARNING_PORT', '8765'))
     server = make_server(service, host, port)
     print(f'服务端已启动，监听地址：{host}:{port}')
+    print('固定管理员账号：lfp（管理员信息不保存到数据库）')
     print(f'同机客户端地址：http://127.0.0.1:{port}')
     if host == '0.0.0.0':
         print(f'局域网客户端请填写：http://本机局域网IP:{port}')

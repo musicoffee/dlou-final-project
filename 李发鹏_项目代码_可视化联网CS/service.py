@@ -9,6 +9,11 @@ from datetime import datetime
 from database import connect, initialize, DEFAULT_DB
 
 
+# 老师指定唯一管理员直接写在服务端代码中，不保存到数据库。
+ADMIN_USERNAME = 'lfp'
+ADMIN_PASSWORD = '123456'
+
+
 def now():
     return datetime.now().astimezone().isoformat(timespec='seconds')
 
@@ -52,20 +57,10 @@ class LearningService:
         self.sessions = {}
         self.session_lock = threading.Lock()
 
-    def create_admin(self, username, password):
-        username = text_field({'username': username}, 'username', 30)
-        password = read_password({'password': password})
-        salt = secrets.token_hex(16)
-        with connect(self.db_path) as db:
-            db.execute('INSERT INTO users(username,password_hash,salt,role) VALUES(?,?,?,?)',
-                       (username, password_hash(password, salt), salt, 'admin'))
-
-    def has_admin(self):
-        with connect(self.db_path) as db:
-            return db.execute("SELECT id FROM users WHERE role='admin'").fetchone() is not None
-
-    def profile(self, db, user_id):
-        row = db.execute('''SELECT id,username,role,
+    def profile(self, db, user_id, is_admin=False):
+        if is_admin:
+            return {'id': 0, 'username': ADMIN_USERNAME, 'role': 'admin', 'points': 0}
+        row = db.execute('''SELECT id,username,'user' AS role,
             (SELECT COUNT(*) FROM records WHERE user_id=users.id) AS points
             FROM users WHERE id=?''', (user_id,)).fetchone()
         if row is None:
@@ -79,6 +74,8 @@ class LearningService:
         with connect(self.db_path) as db:
             if action == 'register':
                 username = text_field(data, 'username', 30)
+                if username == ADMIN_USERNAME:
+                    raise ValueError('该用户名为管理员专用账号')
                 password = read_password(data)
                 if password != data.get('confirm_password'):
                     raise ValueError('两次密码不一致')
@@ -92,20 +89,28 @@ class LearningService:
             if action == 'login':
                 username = text_field(data, 'username', 30)
                 password = read_password(data)
-                user = db.execute('SELECT * FROM users WHERE username=?', (username,)).fetchone()
-                if not user or not hmac.compare_digest(password_hash(password, user['salt']), user['password_hash']):
-                    raise PermissionError('用户名或密码错误')
+                is_admin = username == ADMIN_USERNAME
+                if is_admin:
+                    if not hmac.compare_digest(password, ADMIN_PASSWORD):
+                        raise PermissionError('用户名或密码错误')
+                    user_id = None
+                else:
+                    user = db.execute('SELECT * FROM users WHERE username=?', (username,)).fetchone()
+                    if not user or not hmac.compare_digest(password_hash(password, user['salt']), user['password_hash']):
+                        raise PermissionError('用户名或密码错误')
+                    user_id = user['id']
                 new_token = secrets.token_urlsafe(32)
                 with self.session_lock:
                     self.sessions = {k: v for k, v in self.sessions.items() if v[1] > time.time()}
-                    self.sessions[new_token] = (user['id'], time.time() + 8 * 3600)
-                return {'token': new_token, 'user': self.profile(db, user['id'])}
+                    self.sessions[new_token] = (user_id, time.time() + 8 * 3600, is_admin)
+                return {'token': new_token, 'user': self.profile(db, user_id, is_admin)}
 
             with self.session_lock:
                 session = self.sessions.get(token)
             if not session or session[1] <= time.time():
                 raise PermissionError('登录已失效，请重新登录')
-            user = self.profile(db, session[0])
+            is_admin = session[2]
+            user = self.profile(db, session[0], is_admin)
             user_id = user['id']
             if action == 'logout':
                 with self.session_lock:
@@ -114,6 +119,8 @@ class LearningService:
             if action == 'profile':
                 return user
             if action == 'update_profile':
+                if is_admin:
+                    raise PermissionError('管理员账号固定，不能修改')
                 old_password = read_password(data, 'old_password')
                 saved = db.execute('SELECT * FROM users WHERE id=?', (user_id,)).fetchone()
                 if not hmac.compare_digest(password_hash(old_password, saved['salt']), saved['password_hash']):
@@ -149,6 +156,8 @@ class LearningService:
                     place['is_hot'] = place['checkins'] >= 10
                 return [p for p in places if p['is_hot']] if action == 'hot_places' else places
             if action == 'list_records':
+                if is_admin:
+                    raise PermissionError('管理员没有个人打卡记录')
                 record_id = read_id(data, optional=True)
                 place_id = read_id(data, 'place_id', optional=True)
                 # 排序只能从固定白名单选择，不能把用户输入直接拼进 SQL。
@@ -161,6 +170,8 @@ class LearningService:
                     WHERE user_id=? AND (? IS NULL OR r.id=?) AND (? IS NULL OR place_id=?)
                     ORDER BY ''' + order, (user_id, record_id, record_id, place_id, place_id))]
             if action == 'checkin':
+                if is_admin:
+                    raise PermissionError('管理员不参与学习打卡')
                 place_id = read_id(data, 'place_id')
                 reflection = text_field(data, 'reflection', 3000)
                 if not db.execute('SELECT id FROM places WHERE id=?', (place_id,)).fetchone():
@@ -169,6 +180,8 @@ class LearningService:
                            (user_id, place_id, now(), reflection))
                 return {'message': '打卡成功，学习积分 +1'}
             if action in ('update_record', 'delete_record'):
+                if is_admin:
+                    raise PermissionError('管理员没有个人打卡记录')
                 number = read_id(data)
                 if action == 'update_record':
                     reflection = text_field(data, 'reflection', 3000)
@@ -180,10 +193,10 @@ class LearningService:
                     raise ValueError('记录不存在或不属于当前用户')
                 return {'message': '心得已修改' if action == 'update_record' else '记录已删除，学习积分 -1'}
 
-            if user['role'] != 'admin':
+            if not is_admin:
                 raise PermissionError('该操作需要管理员权限')
             if action == 'list_users':
-                return [dict(r) for r in db.execute('''SELECT id,username,role,
+                return [dict(r) for r in db.execute('''SELECT id,username,'user' AS role,
                     (SELECT COUNT(*) FROM records WHERE user_id=users.id) AS points FROM users ORDER BY id''')]
             if action == 'save_place':
                 fields = (text_field(data, 'name', 100), text_field(data, 'location', 200), text_field(data, 'history', 5000))

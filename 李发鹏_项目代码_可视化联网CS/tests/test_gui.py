@@ -19,9 +19,10 @@ class GuiTest(unittest.TestCase):
     def test_desktop_flow(self):
         with tempfile.TemporaryDirectory() as folder:
             service = LearningService(Path(folder) / 'gui.db')
-            service.create_admin('gui_admin', 'testpass1')
-            token = service.handle('login', {'username': 'gui_admin', 'password': 'testpass1'})['token']
+            token = service.handle('login', {'username': 'lfp', 'password': '123456'})['token']
             service.handle('save_place', {'name': '界面测试景点', 'location': '测试位置', 'history': '界面测试内容'}, token)
+            service.handle('register', {'username': 'gui_user', 'password': 'testpass1',
+                                        'confirm_password': 'testpass1'})
             server = make_server(service, port=0)
             thread = threading.Thread(target=server.serve_forever, daemon=True)
             thread.start()
@@ -50,7 +51,7 @@ class GuiTest(unittest.TestCase):
                     app.check_connection(app.api.base_url)
                     wait()
                     self.assertIn('运行中', app.status.get())
-                    app.request('login', {'username': 'gui_admin', 'password': 'testpass1'}, app.logged_in)
+                    app.request('login', {'username': 'gui_user', 'password': 'testpass1'}, app.logged_in)
                     wait()
                     self.assertEqual(len(app.tables['places'].get_children()), 1)
                     self.assertIn('学习积分：0', app.profile_text.get())

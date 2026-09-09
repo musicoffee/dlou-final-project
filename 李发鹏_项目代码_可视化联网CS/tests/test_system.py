@@ -21,12 +21,11 @@ class SystemTest(unittest.TestCase):
         self.temp = tempfile.TemporaryDirectory()
         self.db = Path(self.temp.name) / 'test.db'
         self.service = LearningService(self.db)
-        self.service.create_admin('manager', 'testpass1')
         self.server = make_server(self.service, port=0)
         self.thread = threading.Thread(target=self.server.serve_forever, daemon=True)
         self.thread.start()
         self.url = f'http://127.0.0.1:{self.server.server_port}'
-        self.admin = self.login('manager')
+        self.admin = self.login('lfp', '123456')
         self.user = self.register('student')
         self.other = self.register('other')
         self.admin.call('save_place', {'name': '测试景点', 'location': '测试位置', 'history': '仅用于自动化测试'})
@@ -38,9 +37,9 @@ class SystemTest(unittest.TestCase):
         self.thread.join()
         self.temp.cleanup()
 
-    def login(self, username):
+    def login(self, username, password='testpass1'):
         client = ApiClient(self.url)
-        client.token = client.call('login', {'username': username, 'password': 'testpass1'})['token']
+        client.token = client.call('login', {'username': username, 'password': password})['token']
         return client
 
     def register(self, username):
@@ -53,15 +52,26 @@ class SystemTest(unittest.TestCase):
             self.register('student')
         with self.assertRaisesRegex(ValueError, '不一致'):
             ApiClient(self.url).call('register', {'username': 'new', 'password': 'abcdef', 'confirm_password': 'xxxxxx'})
+        with self.assertRaisesRegex(ValueError, '管理员专用'):
+            ApiClient(self.url).call('register', {'username': 'lfp', 'password': 'abcdef', 'confirm_password': 'abcdef'})
         with self.assertRaisesRegex(ValueError, '管理员权限'):
             self.user.call('save_place', {'name': 'bad'})
         with self.assertRaises(ValueError):
             ApiClient(self.url).call('profile')
         with self.assertRaises(ValueError):
             ApiClient(self.url).call('login', {'username': 'student', 'password': 'wrongpass'})
-        with self.assertRaises(sqlite3.IntegrityError):
-            self.service.create_admin('second_admin', 'testpass1')
+        with self.assertRaisesRegex(ValueError, '用户名或密码错误'):
+            self.login('lfp', '654321')
+        with self.assertRaisesRegex(ValueError, '管理员不参与'):
+            self.admin.call('checkin', {'place_id': self.place_id, 'reflection': '管理员打卡'})
+        with self.assertRaisesRegex(ValueError, '账号固定'):
+            self.admin.call('update_profile', {'username': 'other', 'old_password': '123456',
+                                               'password': 'abcdef', 'confirm_password': 'abcdef'})
         self.assertNotIn('password_hash', self.admin.call('list_users')[0])
+        with sqlite3.connect(self.db) as db:
+            columns = [row[1] for row in db.execute('PRAGMA table_info(users)')]
+            self.assertNotIn('role', columns)
+            self.assertEqual(db.execute('SELECT COUNT(*) FROM users').fetchone()[0], 2)
 
     def test_checkin_score_hot_and_ownership(self):
         for i in range(9):

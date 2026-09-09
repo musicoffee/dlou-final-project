@@ -137,22 +137,31 @@ class LearningApp:
         self.tables = {}
         self.filters = {}
         self.details = {}
-        for kind, title, columns in [
+        tab_specs = [
             ('places', '景点与打卡', [('id', '编号'), ('name', '景点名'), ('location', '位置'), ('checkins', '打卡次数'), ('is_hot', '热门')]),
             ('hot', '热门排行榜', [('id', '编号'), ('name', '景点名'), ('location', '位置'), ('checkins', '打卡次数')]),
-            ('notices', '公告', [('id', '编号'), ('title', '标题'), ('published_at', '发布日期'), ('remark', '备注')]),
-            ('records', '我的学习记录', [('id', '记录编号'), ('place_id', '景点编号'), ('name', '景点名'), ('created_at', '打卡时间')])]:
+            ('notices', '公告', [('id', '编号'), ('title', '标题'), ('published_at', '发布日期'), ('remark', '备注')])]
+        if self.user['role'] == 'user':
+            tab_specs.append(('records', '我的学习记录', [('id', '记录编号'), ('place_id', '景点编号'), ('name', '景点名'), ('created_at', '打卡时间')]))
+        self.tab_kinds = []
+        for kind, title, columns in tab_specs:
             frame = ttk.Frame(tabs, padding=12)
             tabs.add(frame, text=title)
+            self.tab_kinds.append(kind)
             self.build_list(frame, kind, columns)
         profile = ttk.Frame(tabs, padding=25)
         tabs.add(profile, text='个人信息')
+        self.tab_kinds.append(None)
         ttk.Label(profile, textvariable=self.profile_text, font=('', 16)).pack(anchor='w', pady=10)
-        ttk.Label(profile, text='密码：******（系统不显示原密码）').pack(anchor='w', pady=10)
-        ttk.Button(profile, text='修改用户名和密码', command=self.edit_profile).pack(anchor='w', pady=10)
+        if self.user['role'] == 'admin':
+            ttk.Label(profile, text='管理员账号固定在服务端代码中，不能注册或修改。').pack(anchor='w', pady=10)
+        else:
+            ttk.Label(profile, text='密码：******（系统不显示原密码）').pack(anchor='w', pady=10)
+            ttk.Button(profile, text='修改用户名和密码', command=self.edit_profile).pack(anchor='w', pady=10)
         if self.user['role'] == 'admin':
             frame = ttk.Frame(tabs, padding=12)
             tabs.add(frame, text='用户列表')
+            self.tab_kinds.append('users')
             self.build_list(frame, 'users', [('id', '编号'), ('username', '用户名'), ('role', '身份'), ('points', '积分')])
         tabs.bind('<<NotebookTabChanged>>', lambda _: self.load_current(tabs))
         self.load('places')
@@ -164,8 +173,7 @@ class LearningApp:
     def load_current(self, tabs):
         if self.busy:
             return
-        names = ['places', 'hot', 'notices', 'records', None, 'users']
-        kind = names[tabs.index(tabs.select())]
+        kind = self.tab_kinds[tabs.index(tabs.select())]
         if kind:
             self.load(kind)
 
@@ -203,7 +211,7 @@ class LearningApp:
         table.bind('<<TreeviewSelect>>', lambda _: self.show_detail(kind))
         actions = ttk.Frame(frame)
         actions.pack(fill='x')
-        if kind in ('places', 'hot'):
+        if self.user['role'] == 'user' and kind in ('places', 'hot'):
             ttk.Button(actions, text='给选中景点打卡', command=lambda: self.checkin(kind)).pack(side='left')
         if kind == 'records':
             ttk.Button(actions, text='修改心得', command=self.edit_record).pack(side='left')
