@@ -9,10 +9,7 @@ class ApiClient:
         self.base_url = base_url.rstrip('/')
         self.token = ''
 
-    def call(self, action, data=None):
-        raw = json.dumps({'action': action, 'data': data or {}}).encode('utf-8')
-        request = Request(self.base_url + '/api', data=raw, headers={
-            'Content-Type': 'application/json', 'Authorization': 'Bearer ' + self.token})
+    def send(self, request):
         try:
             with urlopen(request, timeout=10) as response:
                 result = json.load(response)
@@ -29,3 +26,13 @@ class ApiClient:
         if not result.get('ok'):
             raise ValueError(result.get('message', '操作失败'))
         return result['data']
+
+    def health(self):
+        """检查服务端是否可以连接。"""
+        return self.send(Request(self.base_url + '/health'))
+
+    def call(self, action, data=None):
+        raw = json.dumps({'action': action, 'data': data or {}}).encode('utf-8')
+        request = Request(self.base_url + '/api', data=raw, headers={
+            'Content-Type': 'application/json', 'Authorization': 'Bearer ' + self.token})
+        return self.send(request)

@@ -100,10 +100,15 @@ def main():
                 break
             except ValueError as error:
                 print(error)
-    host = os.environ.get('LEARNING_HOST', '127.0.0.1')
+    # 联网 C/S 版本默认监听所有网卡，同机仍使用 127.0.0.1 访问。
+    host = os.environ.get('LEARNING_HOST', '0.0.0.0')
     port = int(os.environ.get('LEARNING_PORT', '8765'))
     server = make_server(service, host, port)
-    print(f'服务端已启动：http://{host}:{port}，现在可以运行 client.py。')
+    print(f'服务端已启动，监听地址：{host}:{port}')
+    print(f'同机客户端地址：http://127.0.0.1:{port}')
+    if host == '0.0.0.0':
+        print(f'局域网客户端请填写：http://本机局域网IP:{port}')
+    print('现在可以运行 client.py。')
     try:
         server.serve_forever()
     except KeyboardInterrupt:

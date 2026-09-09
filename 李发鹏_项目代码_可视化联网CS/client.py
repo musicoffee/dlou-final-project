@@ -47,6 +47,30 @@ class LearningApp:
                 self.results.put((callback, None, str(error)))
         threading.Thread(target=work, daemon=True).start()
 
+    def check_connection(self, address):
+        address = address.strip().rstrip('/')
+        if not address.startswith(('http://', 'https://')):
+            messagebox.showerror('地址错误', '地址应以 http:// 或 https:// 开头', parent=self.root)
+            return
+        if self.busy:
+            messagebox.showinfo('稍等', '上一项操作正在处理中。', parent=self.root)
+            return
+        self.api.base_url = address
+        self.busy = True
+        self.status.set('正在测试服务端连接……')
+
+        def connected(message):
+            self.status.set(message)
+            messagebox.showinfo('连接成功', message, parent=self.root)
+
+        def work():
+            try:
+                self.results.put((connected, self.api.health(), None))
+            except Exception as error:
+                self.results.put((connected, None, str(error)))
+
+        threading.Thread(target=work, daemon=True).start()
+
     def poll(self):
         try:
             callback, result, error = self.results.get_nowait()
@@ -85,6 +109,8 @@ class LearningApp:
             self.request('login', {k: fields[k].get() for k in ('username', 'password')}, self.logged_in)
         ttk.Button(frame, text='登录', command=login).pack(fill='x', pady=(20, 8))
         ttk.Button(frame, text='注册新用户', command=lambda: self.register(fields['address'].get())).pack(fill='x')
+        ttk.Button(frame, text='测试服务端连接',
+                   command=lambda: self.check_connection(fields['address'].get())).pack(fill='x', pady=(8, 0))
         ttk.Label(frame, text='同机演示使用默认地址；跨电脑时填写服务端电脑的局域网 IP。', wraplength=420).pack(pady=20)
 
     def register(self, address):

@@ -145,6 +145,7 @@ class SystemTest(unittest.TestCase):
     def test_http_invalid_json_and_health(self):
         with urlopen(self.url + '/health') as response:
             self.assertTrue(json.load(response)['ok'])
+        self.assertIn('运行中', ApiClient(self.url).health())
         request = Request(self.url + '/api', data=b'{bad json')
         with self.assertRaises(HTTPError) as error:
             urlopen(request)

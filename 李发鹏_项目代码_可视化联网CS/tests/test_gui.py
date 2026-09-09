@@ -46,7 +46,10 @@ class GuiTest(unittest.TestCase):
                     result.extend(descendants(child))
                 return result
             try:
-                with patch('client.messagebox.showerror', side_effect=lambda title, text, **kw: errors.append(text)), patch('client.messagebox.askyesno', return_value=True):
+                with patch('client.messagebox.showerror', side_effect=lambda title, text, **kw: errors.append(text)), patch('client.messagebox.showinfo', return_value=None), patch('client.messagebox.askyesno', return_value=True):
+                    app.check_connection(app.api.base_url)
+                    wait()
+                    self.assertIn('运行中', app.status.get())
                     app.request('login', {'username': 'gui_admin', 'password': 'testpass1'}, app.logged_in)
                     wait()
                     self.assertEqual(len(app.tables['places'].get_children()), 1)
