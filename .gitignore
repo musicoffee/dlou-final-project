@@ -5,6 +5,6 @@ __pycache__/
 .DS_Store
 .idea/
 .vscode/
-data/*.db
-data/*.db-*
+**/data/*.db
+**/data/*.db-*
 *.log
