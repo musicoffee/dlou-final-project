@@ -1,0 +1,817 @@
+{
+  "info": {
+    "name": "红色文化学习打卡系统 C/S 接口测试",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://127.0.0.1:8765"
+    },
+    {
+      "key": "admin_username",
+      "value": ""
+    },
+    {
+      "key": "admin_password",
+      "value": ""
+    },
+    {
+      "key": "test_password",
+      "value": ""
+    },
+    {
+      "key": "admin_token",
+      "value": ""
+    },
+    {
+      "key": "user_token",
+      "value": ""
+    },
+    {
+      "key": "run_id",
+      "value": ""
+    },
+    {
+      "key": "place_id",
+      "value": ""
+    },
+    {
+      "key": "notice_id",
+      "value": ""
+    },
+    {
+      "key": "record_id",
+      "value": ""
+    },
+    {
+      "key": "test_username",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "01 管理员登录",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"action\": \"login\",\n  \"data\": {\n    \"username\": \"{{admin_username}}\",\n    \"password\": \"{{admin_password}}\"\n  }\n}"
+        },
+        "url": "{{base_url}}/api"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP成功\", function () { pm.response.to.have.status(200); });",
+              "pm.test(\"业务成功\", function () { pm.expect(pm.response.json().ok).to.eql(true); });",
+              "if (pm.response.json().ok) pm.collectionVariables.set(\"admin_token\", pm.response.json().data.token);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "02 添加测试景点",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{admin_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"action\": \"save_place\",\n  \"data\": {\n    \"name\": \"接口测试_{{run_id}}\",\n    \"location\": \"测试位置\",\n    \"history\": \"仅用于接口测试，不是真实历史资料\"\n  }\n}"
+        },
+        "url": "{{base_url}}/api"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP成功\", function () { pm.response.to.have.status(200); });",
+              "pm.test(\"业务成功\", function () { pm.expect(pm.response.json().ok).to.eql(true); });"
+            ]
+          }
+        },
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.collectionVariables.set(\"run_id\", Date.now().toString()); pm.collectionVariables.set(\"test_username\", \"test_\" + Date.now());"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "03 获取测试景点编号",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{admin_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"action\": \"list_places\",\n  \"data\": {\n    \"keyword\": \"接口测试_{{run_id}}\"\n  }\n}"
+        },
+        "url": "{{base_url}}/api"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP成功\", function () { pm.response.to.have.status(200); });",
+              "pm.test(\"业务成功\", function () { pm.expect(pm.response.json().ok).to.eql(true); });",
+              "if (pm.response.json().ok) pm.collectionVariables.set(\"place_id\", pm.response.json().data[0].id);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "04 添加测试公告",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{admin_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"action\": \"save_notice\",\n  \"data\": {\n    \"title\": \"接口公告_{{run_id}}\",\n    \"content\": \"测试内容\",\n    \"remark\": \"测试\"\n  }\n}"
+        },
+        "url": "{{base_url}}/api"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP成功\", function () { pm.response.to.have.status(200); });",
+              "pm.test(\"业务成功\", function () { pm.expect(pm.response.json().ok).to.eql(true); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "05 获取公告编号",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{admin_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"action\": \"list_notices\",\n  \"data\": {\n    \"keyword\": \"接口公告_{{run_id}}\"\n  }\n}"
+        },
+        "url": "{{base_url}}/api"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP成功\", function () { pm.response.to.have.status(200); });",
+              "pm.test(\"业务成功\", function () { pm.expect(pm.response.json().ok).to.eql(true); });",
+              "if (pm.response.json().ok) pm.collectionVariables.set(\"notice_id\", pm.response.json().data[0].id);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "06 注册测试用户",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"action\": \"register\",\n  \"data\": {\n    \"username\": \"{{test_username}}\",\n    \"password\": \"{{test_password}}\",\n    \"confirm_password\": \"{{test_password}}\"\n  }\n}"
+        },
+        "url": "{{base_url}}/api"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP成功\", function () { pm.response.to.have.status(200); });",
+              "pm.test(\"业务成功\", function () { pm.expect(pm.response.json().ok).to.eql(true); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "07 用户登录",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"action\": \"login\",\n  \"data\": {\n    \"username\": \"{{test_username}}\",\n    \"password\": \"{{test_password}}\"\n  }\n}"
+        },
+        "url": "{{base_url}}/api"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP成功\", function () { pm.response.to.have.status(200); });",
+              "pm.test(\"业务成功\", function () { pm.expect(pm.response.json().ok).to.eql(true); });",
+              "if (pm.response.json().ok) pm.collectionVariables.set(\"user_token\", pm.response.json().data.token);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "08 查看个人信息",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{user_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"action\": \"profile\",\n  \"data\": {}\n}"
+        },
+        "url": "{{base_url}}/api"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP成功\", function () { pm.response.to.have.status(200); });",
+              "pm.test(\"业务成功\", function () { pm.expect(pm.response.json().ok).to.eql(true); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "09 景点查询",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{user_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"action\": \"list_places\",\n  \"data\": {\n    \"id\": \"{{place_id}}\"\n  }\n}"
+        },
+        "url": "{{base_url}}/api"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP成功\", function () { pm.response.to.have.status(200); });",
+              "pm.test(\"业务成功\", function () { pm.expect(pm.response.json().ok).to.eql(true); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "10 热门排行",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{user_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"action\": \"hot_places\",\n  \"data\": {}\n}"
+        },
+        "url": "{{base_url}}/api"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP成功\", function () { pm.response.to.have.status(200); });",
+              "pm.test(\"业务成功\", function () { pm.expect(pm.response.json().ok).to.eql(true); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "11 打卡",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{user_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"action\": \"checkin\",\n  \"data\": {\n    \"place_id\": \"{{place_id}}\",\n    \"reflection\": \"接口测试学习心得\"\n  }\n}"
+        },
+        "url": "{{base_url}}/api"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP成功\", function () { pm.response.to.have.status(200); });",
+              "pm.test(\"业务成功\", function () { pm.expect(pm.response.json().ok).to.eql(true); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "12 查看记录",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{user_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"action\": \"list_records\",\n  \"data\": {\n    \"place_id\": \"{{place_id}}\",\n    \"sort\": \"newest\"\n  }\n}"
+        },
+        "url": "{{base_url}}/api"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP成功\", function () { pm.response.to.have.status(200); });",
+              "pm.test(\"业务成功\", function () { pm.expect(pm.response.json().ok).to.eql(true); });",
+              "if (pm.response.json().ok) pm.collectionVariables.set(\"record_id\", pm.response.json().data[0].id);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "13 修改心得",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{user_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"action\": \"update_record\",\n  \"data\": {\n    \"id\": \"{{record_id}}\",\n    \"reflection\": \"修改后的接口测试心得\"\n  }\n}"
+        },
+        "url": "{{base_url}}/api"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP成功\", function () { pm.response.to.have.status(200); });",
+              "pm.test(\"业务成功\", function () { pm.expect(pm.response.json().ok).to.eql(true); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "14 查询积分",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{user_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"action\": \"profile\",\n  \"data\": {}\n}"
+        },
+        "url": "{{base_url}}/api"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP成功\", function () { pm.response.to.have.status(200); });",
+              "pm.test(\"业务成功\", function () { pm.expect(pm.response.json().ok).to.eql(true); });",
+              "pm.test(\"打卡后积分为1\", function(){ pm.expect(pm.response.json().data.points).to.eql(1); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "15 删除本次打卡",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{user_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"action\": \"delete_record\",\n  \"data\": {\n    \"id\": \"{{record_id}}\"\n  }\n}"
+        },
+        "url": "{{base_url}}/api"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP成功\", function () { pm.response.to.have.status(200); });",
+              "pm.test(\"业务成功\", function () { pm.expect(pm.response.json().ok).to.eql(true); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "16 验证积分恢复0",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{user_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"action\": \"profile\",\n  \"data\": {}\n}"
+        },
+        "url": "{{base_url}}/api"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP成功\", function () { pm.response.to.have.status(200); });",
+              "pm.test(\"业务成功\", function () { pm.expect(pm.response.json().ok).to.eql(true); });",
+              "pm.test(\"删除后积分为0\", function(){ pm.expect(pm.response.json().data.points).to.eql(0); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "17 管理员查询用户",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{admin_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"action\": \"list_users\",\n  \"data\": {}\n}"
+        },
+        "url": "{{base_url}}/api"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP成功\", function () { pm.response.to.have.status(200); });",
+              "pm.test(\"业务成功\", function () { pm.expect(pm.response.json().ok).to.eql(true); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "18 修改测试景点",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{admin_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"action\": \"save_place\",\n  \"data\": {\n    \"id\": \"{{place_id}}\",\n    \"name\": \"接口测试修改\",\n    \"location\": \"测试位置\",\n    \"history\": \"修改后的测试内容\"\n  }\n}"
+        },
+        "url": "{{base_url}}/api"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP成功\", function () { pm.response.to.have.status(200); });",
+              "pm.test(\"业务成功\", function () { pm.expect(pm.response.json().ok).to.eql(true); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "19 修改测试公告",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{admin_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"action\": \"save_notice\",\n  \"data\": {\n    \"id\": \"{{notice_id}}\",\n    \"title\": \"修改测试公告\",\n    \"content\": \"修改测试内容\",\n    \"remark\": \"\"\n  }\n}"
+        },
+        "url": "{{base_url}}/api"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP成功\", function () { pm.response.to.have.status(200); });",
+              "pm.test(\"业务成功\", function () { pm.expect(pm.response.json().ok).to.eql(true); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "20 清理测试景点",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{admin_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"action\": \"delete_place\",\n  \"data\": {\n    \"id\": \"{{place_id}}\"\n  }\n}"
+        },
+        "url": "{{base_url}}/api"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP成功\", function () { pm.response.to.have.status(200); });",
+              "pm.test(\"业务成功\", function () { pm.expect(pm.response.json().ok).to.eql(true); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "21 清理测试公告",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{admin_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"action\": \"delete_notice\",\n  \"data\": {\n    \"id\": \"{{notice_id}}\"\n  }\n}"
+        },
+        "url": "{{base_url}}/api"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP成功\", function () { pm.response.to.have.status(200); });",
+              "pm.test(\"业务成功\", function () { pm.expect(pm.response.json().ok).to.eql(true); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "22 用户退出",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{user_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"action\": \"logout\",\n  \"data\": {}\n}"
+        },
+        "url": "{{base_url}}/api"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP成功\", function () { pm.response.to.have.status(200); });",
+              "pm.test(\"业务成功\", function () { pm.expect(pm.response.json().ok).to.eql(true); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "23 管理员退出",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{admin_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"action\": \"logout\",\n  \"data\": {}\n}"
+        },
+        "url": "{{base_url}}/api"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"HTTP成功\", function () { pm.response.to.have.status(200); });",
+              "pm.test(\"业务成功\", function () { pm.expect(pm.response.json().ok).to.eql(true); });"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}
